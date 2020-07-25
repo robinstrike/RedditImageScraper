@@ -4,7 +4,7 @@ from requests import get
 import os
 import shutil
 
-
+# run this script from ris.py
 def scrapeimgs(subredditname, count):
     red = praw.Reddit(client_id="_4W54SFBNZJwAA",
                       client_secret="jiQj7rsZeozEquzDl9NjudQn-Z8",
