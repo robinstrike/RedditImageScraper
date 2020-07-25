@@ -35,3 +35,5 @@ def scrapeimgs(subredditname, count):
                 shutil.copyfileobj(r.raw, file)
                 file.close()
 
+if __name__ == '__main__':
+    scrapeimgs()
