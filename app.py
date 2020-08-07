@@ -107,17 +107,3 @@ def create_jsonfile(fname):
     with open(fname, mode = 'w') as f:
         f.write("{\"urls\":[]}")
 
-
-"""
-app.scrape_content("subreddit", count, media)
-
-subreddit : name of subreddit
-count : number of posts to grab (default = 25)
-media : 1 for pics (default)
-media : 2 for text
-media : 3 for urls
-"""
-
-
-scrape_content(subredditname = "jokesaredark", count = 50, media = 2)
-
