@@ -32,8 +32,6 @@ def process_images(sro, count):
         if each.stickied:
             continue
         img_filename = extract_file_name(each.url)
-        if img_filename is None:
-            img_filename = manually_extract_filename(each.url)
         if img_filename:
             download_pics(each, img_filename)
 
@@ -51,7 +49,7 @@ def extract_file_name(url):
     if img_filename is not None:
         return img_filename.group(0)
     else:
-        return None
+        return manually_extract_filename(url)
 
 
 def download_pics(each, fname):
