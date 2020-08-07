@@ -1,39 +1,123 @@
 import praw
-from regex import match
+import regex
 from requests import get
 import os
 import shutil
+import json
 
-# run this script from ris.py
-def scrapeimgs(subredditname, count):
-    red = praw.Reddit(client_id="_4W54SFBNZJwAA",
-                      client_secret="jiQj7rsZeozEquzDl9NjudQn-Z8",
-                      password="Live-in69",
-                      user_agent="testscript by /u/yardley_process",
-                      username="yardley_process")
 
-    subRed = red.subreddit(subredditname)
+def scrape_content(subredditname, count = 25, media = 1):
+    subred_object = obtain_subreddit_object(subredditname)
+    if media == 1:
+        process_images(subred_object, count)
+    elif media == 2:
+        download_text(subred_object, count)
+    elif media == 3:
+        download_urls(subred_object, count)
 
-    os.mkdir(os.path.join(os.getcwd(), subRed.display_name))
 
-    for each in subRed.hot(limit = count):
+def obtain_subreddit_object(subredditname):
+    red_object = praw.Reddit(client_id = "_4W54SFBNZJwAA",
+                             client_secret = "jiQj7rsZeozEquzDl9NjudQn-Z8",
+                             password = "Live-in69",
+                             user_agent = "testscript by /u/yardley_process",
+                             username = "yardley_process")
+    subred_object = red_object.subreddit(subredditname)
+    return subred_object
 
-        isImg = match(r".*\.png.*|.*\.jpg.*", each.url)
 
-        if isImg is None:
-            if match(r"https://imgur\.com", each.url):
-                each.url = str(each.url).replace("imgur", "i.imgur") + ".jpg"
-                isImg = True
-                
+def process_images(sro, count):
+    make_dir(sro, "_pics")
+    for each in sro.hot(limit = count):
+        if each.stickied:
+            continue
+        img_filename = extract_file_name(each.url)
+        if img_filename is None:
+            img_filename = manually_extract_filename(each.url)
+        if img_filename:
+            download_pics(each, img_filename)
 
-        if isImg:
-            r = get(each.url, stream = True)
-            if r.status_code == 200:
-                r.raw.decode_content = True
-                file = open(os.path.join(os.getcwd(), 
-                                         subRed.display_name, str(each) + ".jpg"), "wb")
-                shutil.copyfileobj(r.raw, file)
-                file.close()
 
-if __name__ == '__main__':
-    scrapeimgs()
+def manually_extract_filename(url):
+    if regex.match(r"https://imgur\.com", url):
+        modified_url = str(url).replace("imgur", "i.imgur") + ".jpg"
+        return extract_file_name(modified_url)
+    else:
+        return None
+
+
+def extract_file_name(url):
+    img_filename = regex.search(r"[^/\\&\?]+\.(jpeg|jpg|png)(?=([\?&].*$|$))", url)
+    if img_filename is not None:
+        return img_filename.group(0)
+    else:
+        return None
+
+
+def download_pics(each, fname):
+    page = get(each.url, stream = True) 
+    if page.status_code == 200:
+        page.raw.decode_content = True
+        file = open(fname, mode = "wb")
+        shutil.copyfileobj(page.raw, file)
+        file.close()
+
+
+def download_text(sro, count):
+    make_dir(sro, "_text")
+    f = sro.display_name + "_text.txt"
+    file = open(f, mode = "a")
+    for each in sro.hot(limit = count):
+        if each.stickied:
+            continue
+        file.write(each.title + "\n")
+        file.write(each.selftext + "\n" + "\n" + "\n")
+    file.close()
+
+
+def download_urls(sro, count):
+    make_dir(sro, "_urls")
+    fname = sro.display_name + "_urls.json"
+    create_jsonfile(fname)
+    with open(fname) as f:
+        data = json.load(f)
+        temp = data['urls']
+        for each in sro.hot(limit = count):
+            if each.stickied:
+                continue
+            post = {"title": each.title, "text": each.selftext, "url": each.url}
+            temp.append(post)
+
+    with open(fname, 'w') as f:     # opening in write mode to rewrite
+        json.dump(data, f, indent = 4)
+
+
+def make_dir(sro, type):
+    path, folder = os.path.split(os.getcwd())
+    new_folder = str(sro) + type
+    new_path = os.path.join(path, new_folder)
+    i = 1
+    while os.path.exists(new_path):
+        new_path = new_path + str(i)
+    os.mkdir(new_path)
+    os.chdir(new_path)
+
+
+def create_jsonfile(fname):
+    with open(fname, mode = 'w') as f:
+        f.write("{\"urls\":[]}")
+
+
+"""
+app.scrape_content("subreddit", count, media)
+
+subreddit : name of subreddit
+count : number of posts to grab (default = 25)
+media : 1 for pics (default)
+media : 2 for text
+media : 3 for urls
+"""
+
+
+scrape_content(subredditname = "jokesaredark", count = 50, media = 2)
+
