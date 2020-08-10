@@ -4,9 +4,10 @@ from requests import get
 import os
 import shutil
 import json
+from bs4 import BeautifulSoup
 
 
-def scrape_content(subredditname, count = 25, media = 1):
+def scrape_content(subredditname, count, media):
     subred_object = obtain_subreddit_object(subredditname)
     if media == 1:
         process_images(subred_object, count)
@@ -14,14 +15,16 @@ def scrape_content(subredditname, count = 25, media = 1):
         download_text(subred_object, count)
     elif media == 3:
         download_urls(subred_object, count)
+    elif media == 4:
+        download_gifs(subred_object, count)
 
 
 def obtain_subreddit_object(subredditname):
-    red_object = praw.Reddit(client_id = "xxxx",
-                             client_secret = "xxxx",
-                             password = "xxxx",
-                             user_agent = "xxxx",
-                             username = "xxxx")
+    red_object = praw.Reddit(client_id = "_4W54SFBNZJwAA",
+                             client_secret = "jiQj7rsZeozEquzDl9NjudQn-Z8",
+                             password = "Live-in69",
+                             user_agent = "testscript by /u/yardley_process",
+                             username = "yardley_process")
     subred_object = red_object.subreddit(subredditname)
     return subred_object
 
@@ -31,9 +34,7 @@ def process_images(sro, count):
     for each in sro.hot(limit = count):
         if each.stickied:
             continue
-        img_filename = extract_file_name(each.url)
-        if img_filename:
-            download_pics(each, img_filename)
+        download_pics(each.url)
 
 
 def manually_extract_filename(url):
@@ -45,20 +46,67 @@ def manually_extract_filename(url):
 
 
 def extract_file_name(url):
-    img_filename = regex.search(r"[^/\\&\?]+\.(jpeg|jpg|png)(?=([\?&].*$|$))", url)
+    img_filename = regex.search(r"[^/\\&\?]+\.(jpeg|jpg|png|gif|mp4|webm)(?=([\?&].*$|$))", url)
     if img_filename is not None:
         return img_filename.group(0)
     else:
         return manually_extract_filename(url)
 
 
-def download_pics(each, fname):
-    page = get(each.url, stream = True) 
+def download_pics(url):
+    fname = extract_file_name(url)
+    try:
+        page = get(url, stream = True)
+    except:
+        return
     if page.status_code == 200:
         page.raw.decode_content = True
         file = open(fname, mode = "wb")
-        shutil.copyfileobj(page.raw, file)
+        try:
+            shutil.copyfileobj(page.raw, file)
+        except:
+            return
         file.close()
+
+
+def download_gifs(sro, count):
+    make_dir(sro, "_gifs")
+    for each in sro.hot(limit = count):
+        if each.stickied:
+            continue
+        if regex.match(r".*\.png|.*\.jpg", each.url):
+            continue
+        if regex.match(r".*\.gif$", each.url):
+            download_pics(each.url)
+            continue
+        page = get(each.url)
+        soup = BeautifulSoup(page.content, 'html.parser')
+        if regex.match(r".*redgifs", each.url):
+            try:
+                c_url = soup.find("video").find("source")['src']
+            except:
+                continue
+            if regex.match(r".*thcf(?=6|8|3).", c_url):
+                download_pics(c_url)
+        elif regex.match(r".*gfycat", each.url):
+            if soup.find("title").string == "Page not found | Gfycat":
+                continue
+            try:
+                c_url = soup.find("video").find("source")['src']
+            except:
+                continue
+            if regex.match(r"https:\/\/thcf", c_url):
+                if not regex.match(r".*thcf(?=6|8|3).", c_url):
+                    continue
+            download_pics(c_url)
+        elif regex.match(r".*imgur", each.url):
+            try:
+                c_url = "https:" + soup.find("source")['src']
+            except:
+                continue
+            download_pics(c_url)
+        else:
+            continue
 
 
 def download_text(sro, count):
@@ -104,4 +152,39 @@ def make_dir(sro, type):
 def create_jsonfile(fname):
     with open(fname, mode = 'w') as f:
         f.write("{\"urls\":[]}")
+
+
+# utility methods
+def get_urls(sro, count):
+    sro = obtain_subreddit_object(sro)
+    for each in sro.hot(limit = count):
+        with open("new_f.txt", mode = "a") as f:
+            f.write(each.url + "\n")
+
+
+def count_origin(subredname, count):
+    sro = obtain_subreddit_object(subredname)
+    f = open("u.txt", "a")
+
+    r = 0
+    g = 0
+    i = 0
+    o = 0
+    red = 0
+
+    for each in sro.hot(limit = count):
+        s = str(each.url)
+        f.write(s + "\n")
+        if regex.match(r".*redgifs.*", s):
+            r = r+1
+        elif regex.match(r".*gfycat.*", s):
+            g = g+1
+        elif regex.match(r".*imgur.*", s):
+            i = i+1
+        elif regex.match(r".*redd.*", s):
+            red = red+1
+        else:
+            o = o + 1
+    f.close()
+    print("redgifs = " + str(r) + "\n" + "gfycat = " + str(g) + "\n" + "imgur = " + str(i) + "\n" + "reddit = " + str(red) + "\n" + "others = " + str(o) + "\n")
 
