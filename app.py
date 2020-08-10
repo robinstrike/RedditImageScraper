@@ -20,11 +20,11 @@ def scrape_content(subredditname, count, media):
 
 
 def obtain_subreddit_object(subredditname):
-    red_object = praw.Reddit(client_id = "_4W54SFBNZJwAA",
-                             client_secret = "jiQj7rsZeozEquzDl9NjudQn-Z8",
-                             password = "Live-in69",
-                             user_agent = "testscript by /u/yardley_process",
-                             username = "yardley_process")
+    red_object = praw.Reddit(client_id = "xxxx",
+                             client_secret = "xxxx",
+                             password = "xxxx",
+                             user_agent = "xxxx",
+                             username = "xxxx")
     subred_object = red_object.subreddit(subredditname)
     return subred_object
 
